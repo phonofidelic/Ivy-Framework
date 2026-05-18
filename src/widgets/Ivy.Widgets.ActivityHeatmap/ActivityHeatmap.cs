@@ -11,7 +11,7 @@ public record ActivityHeatmap : WidgetBase<ActivityHeatmap>
     /// <summary>Daily activity data. One entry per active day — missing days are rendered as zero.</summary>
     [Prop] public Activity[] Data { get; init; } = [];
 
-    [Prop] public Colors ColorScheme { get; init; } = Colors.Primary;
+    [Prop] public Colors[] ColorScheme { get; init; } = [Colors.Primary];
 
     [Prop] public bool ShowTooltip { get; init; } = true;
 
@@ -32,6 +32,12 @@ public static class ActivityHeatmapExtensions
         w with { Data = data };
 
     public static ActivityHeatmap ColorScheme(this ActivityHeatmap w, Colors scheme) =>
+        w with { ColorScheme = [scheme] };
+
+    public static ActivityHeatmap ColorScheme(this ActivityHeatmap w, Colors minScheme, Colors maxScheme) =>
+        w with { ColorScheme = [minScheme, maxScheme] };
+
+    public static ActivityHeatmap ColorScheme(this ActivityHeatmap w, Colors[] scheme) =>
         w with { ColorScheme = scheme };
 
     public static ActivityHeatmap ShowTooltip(this ActivityHeatmap w, bool show = true) =>
@@ -113,13 +119,25 @@ public static class ActivityHeatmapGrid
         return [.. weeks];
     }
 
-    public static int GetLevel(int count, int maxCount)
+    public static int GetLevel(int count, int maxCount, int? minCount = null)
     {
-        if (count == 0 || maxCount == 0) return 0;
-        if (count <= maxCount * 0.25) return 1;
-        if (count <= maxCount * 0.50) return 2;
-        if (count <= maxCount * 0.75) return 3;
-        return 4;
+        if (count == 0) return 0;
+        if (count < 0 && minCount.HasValue && minCount.Value < 0)
+        {
+            var min = minCount.Value;
+            if (count <= min)            return -4;
+            if (count <= min * 0.75)     return -3;
+            if (count <= min * 0.50)     return -2;
+            return -1;
+        }
+        if (count > 0 && maxCount > 0)
+        {
+            if (count <= maxCount * 0.25) return 1;
+            if (count <= maxCount * 0.50) return 2;
+            if (count <= maxCount * 0.75) return 3;
+            return 4;
+        }
+        return 0;
     }
 }
 

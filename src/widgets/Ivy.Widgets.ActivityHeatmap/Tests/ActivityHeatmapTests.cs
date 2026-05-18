@@ -232,4 +232,54 @@ public class ActivityHeatmapTests
         Assert.True(weeks[0][0].Date <= last);
         Assert.True(weeks[^1][6].Date >= first);
     }
+
+    [Fact]
+    public void GetLevel_BipolarNegativeCount_ReturnsNegativeLevel()
+    {
+        int min = -100;
+
+        // count <= min → -4
+        Assert.Equal(-4, ActivityHeatmapGrid.GetLevel(-100, 100, min));
+        // count <= min * 0.75 (i.e. <= -75) → -3
+        Assert.Equal(-3, ActivityHeatmapGrid.GetLevel(-76, 100, min));
+        Assert.Equal(-3, ActivityHeatmapGrid.GetLevel(-75, 100, min));
+        // count <= min * 0.50 (i.e. <= -50) → -2
+        Assert.Equal(-2, ActivityHeatmapGrid.GetLevel(-51, 100, min));
+        Assert.Equal(-2, ActivityHeatmapGrid.GetLevel(-50, 100, min));
+        // count < 0 and > -50 → -1
+        Assert.Equal(-1, ActivityHeatmapGrid.GetLevel(-1, 100, min));
+        Assert.Equal(-1, ActivityHeatmapGrid.GetLevel(-49, 100, min));
+    }
+
+    [Fact]
+    public void GetLevel_BipolarPositiveCount_WithNegativeMin_ReturnsPositiveLevel()
+    {
+        int min = -100;
+        int max = 100;
+
+        Assert.Equal(1, ActivityHeatmapGrid.GetLevel(1, max, min));
+        Assert.Equal(1, ActivityHeatmapGrid.GetLevel(25, max, min));
+        Assert.Equal(2, ActivityHeatmapGrid.GetLevel(26, max, min));
+        Assert.Equal(2, ActivityHeatmapGrid.GetLevel(50, max, min));
+        Assert.Equal(3, ActivityHeatmapGrid.GetLevel(51, max, min));
+        Assert.Equal(3, ActivityHeatmapGrid.GetLevel(75, max, min));
+        Assert.Equal(4, ActivityHeatmapGrid.GetLevel(76, max, min));
+        Assert.Equal(4, ActivityHeatmapGrid.GetLevel(100, max, min));
+    }
+
+    [Fact]
+    public void GetLevel_NoMinCount_PositiveCounts_ReturnsCorrectLevels()
+    {
+        int max = 100;
+
+        Assert.Equal(0, ActivityHeatmapGrid.GetLevel(0, max));
+        Assert.Equal(1, ActivityHeatmapGrid.GetLevel(1, max));
+        Assert.Equal(1, ActivityHeatmapGrid.GetLevel(25, max));
+        Assert.Equal(2, ActivityHeatmapGrid.GetLevel(26, max));
+        Assert.Equal(2, ActivityHeatmapGrid.GetLevel(50, max));
+        Assert.Equal(3, ActivityHeatmapGrid.GetLevel(51, max));
+        Assert.Equal(3, ActivityHeatmapGrid.GetLevel(75, max));
+        Assert.Equal(4, ActivityHeatmapGrid.GetLevel(76, max));
+        Assert.Equal(4, ActivityHeatmapGrid.GetLevel(100, max));
+    }
 }
