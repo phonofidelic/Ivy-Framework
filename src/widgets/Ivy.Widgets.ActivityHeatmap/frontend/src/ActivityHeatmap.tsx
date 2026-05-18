@@ -4,13 +4,13 @@ import { ActivityHeatmapProps, Activity } from "./types";
 function buildBipolarColors(minColor: string, maxColor: string): Record<number, string> {
   return {
     [-4]: minColor,
-    [-3]: `color-mix(in srgb, ${minColor} 75%, transparent)`,
-    [-2]: `color-mix(in srgb, ${minColor} 50%, transparent)`,
-    [-1]: `color-mix(in srgb, ${minColor} 25%, transparent)`,
-    [0]: "transparent",
-    [1]: `color-mix(in srgb, ${maxColor} 25%, transparent)`,
-    [2]: `color-mix(in srgb, ${maxColor} 50%, transparent)`,
-    [3]: `color-mix(in srgb, ${maxColor} 75%, transparent)`,
+    [-3]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 75%, ${maxColor}) 85%, transparent)`,
+    [-2]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 50%, ${maxColor}) 75%, transparent)`,
+    [-1]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 25%, ${maxColor}) 33%, transparent)`,
+    [0]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 50%, ${maxColor}) 15%, transparent)`,
+    [1]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 25%, ${minColor}) 33%, transparent)`,
+    [2]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 50%, ${minColor}) 75%, transparent)`,
+    [3]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 75%, ${minColor}) 85%, transparent)`,
     [4]: maxColor,
   };
 }
@@ -140,23 +140,26 @@ export function ActivityHeatmap({
   startDate,
   endDate,
 }: ActivityHeatmapProps) {
+  // console.log(`data: ${JSON.stringify(data, null,)}`);
   const weeks = buildGrid(data, startDate, endDate);
-  const maxCount = Math.max(0, ...data.map((d) => d.count));
-  const minCount = Math.min(0, ...data.map((d) => d.count));
+  const counts = data.map((d) => d.count ?? 0);
+  const maxCount = counts.length ? Math.max(0, ...counts) : 0;
+  const minCount = counts.length ? Math.min(0, ...counts) : 0;
+  console.log(`maxCount: ${maxCount}, minCount: ${minCount}`);
   const rawScheme = Array.isArray(colorScheme) ? colorScheme : [colorScheme ?? "primary"];
   const isBipolar = rawScheme.length >= 2;
   const colorMap: Record<number, string> = isBipolar
     ? buildBipolarColors(
-        `var(--color-${rawScheme[0]!.toLowerCase()})`,
-        `var(--color-${rawScheme[1]!.toLowerCase()})`,
-      )
+      `var(--color-${rawScheme[0]!.toLowerCase()})`,
+      `var(--color-${rawScheme[1]!.toLowerCase()})`,
+    )
     : {
-        0: "transparent",
-        1: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 25%, transparent)`,
-        2: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 50%, transparent)`,
-        3: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 75%, transparent)`,
-        4: `var(--color-${rawScheme[0]!.toLowerCase()})`,
-      };
+      0: "var(--color-muted)",
+      1: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 25%, transparent)`,
+      2: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 50%, transparent)`,
+      3: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 75%, transparent)`,
+      4: `var(--color-${rawScheme[0]!.toLowerCase()})`,
+    };
   const clickable = events.includes("OnDayClick");
 
   // Compute month labels: for each week, check if the first non-null day is the first occurrence of a new month
@@ -183,8 +186,8 @@ export function ActivityHeatmap({
   };
 
   return (
-    <div className="flex w-full relative bg-background rounded border-secondary">
-      <div className=" overflow-x-auto p-0" style={{ direction: "rtl" }}>
+    <div className="flex w-full relative bg-background rounded border-secondary pb-6">
+      <div className="overflow-x-auto p-0" style={{ direction: "rtl" }}>
         <div className="inline-flex flex-col gap-1 font-sans" style={{ direction: "ltr" }}>
           {showMonthLabels && (
             <div className="flex gap-0.5 text-[#57606a] w-fit">
@@ -203,7 +206,7 @@ export function ActivityHeatmap({
 
           <div className="flex gap-1">
             {showDayLabels && (
-              <div className="flex flex-col justify-end absolute left-0 top-0 bottom-0 bg-background">
+              <div className="flex flex-col justify-end absolute left-0 top-0 bottom-[24px] bg-background">
                 <div
                   className="grid gap-0.5 text-secondary-foreground opacity-50 pt-0.5 *:pr-2 *:text-right"
                   style={{ gridTemplateRows: "repeat(7, 11px)", width: "28px" }}
@@ -243,6 +246,47 @@ export function ActivityHeatmap({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+        <div className="absolute bottom-0 right-0 flex justify-center gap-1" style={{ direction: "ltr" }}>
+          <div style={{ fontSize: "10px", lineHeight: "11px" }}>
+            Less
+          </div>
+          <div className="grid gap-0.5" style={{ gridTemplateColumns: isBipolar ? "repeat(9, 11px)" : "repeat(5, 11px)" }}>
+            {isBipolar && (
+              <>
+                <div className="col-span-1">
+                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-4] }} />
+                </div>
+                <div className="col-span-1">
+                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-3] }} />
+                </div>
+                <div className="col-span-1">
+                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-2] }} />
+                </div>
+                <div className="col-span-1">
+                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-1] }} />
+                </div>
+              </>
+            )}
+            <div className="col-span-1">
+              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[0] }} />
+            </div>
+            <div className="col-span-1">
+              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[1] }} />
+            </div>
+            <div className="col-span-1">
+              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[2] }} />
+            </div>
+            <div className="col-span-1">
+              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[3] }} />
+            </div>
+            <div className="col-span-1">
+              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[4] }} />
+            </div>
+          </div>
+          <div style={{ fontSize: "10px", lineHeight: "11px" }}>
+            More
           </div>
         </div>
       </div>
