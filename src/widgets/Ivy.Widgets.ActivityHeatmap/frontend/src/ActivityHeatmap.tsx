@@ -145,7 +145,6 @@ export function ActivityHeatmap({
   const counts = data.map((d) => d.count ?? 0);
   const maxCount = counts.length ? Math.max(0, ...counts) : 0;
   const minCount = counts.length ? Math.min(0, ...counts) : 0;
-  console.log(`maxCount: ${maxCount}, minCount: ${minCount}`);
   const rawScheme = Array.isArray(colorScheme) ? colorScheme : [colorScheme ?? "primary"];
   const isBipolar = rawScheme.length >= 2;
   const colorMap: Record<number, string> = isBipolar
