@@ -26,6 +26,8 @@ class ActivityHeatmapDemo : ViewBase
         var client = UseService<IClientProvider>();
 
         var selectedColor = UseState(Colors.Emerald);
+        var selectedNegativeColor = UseState(Colors.Destructive);
+        var selectedPositiveColor = UseState(Colors.Success);
         var showDayLabels = UseState(false);
         var showMonthLabels = UseState(false);
         var nullableRange = UseState<(DateOnly?, DateOnly?)>(() =>
@@ -118,11 +120,21 @@ class ActivityHeatmapDemo : ViewBase
             | Text.H2("With Bipolar Color Scheme:")
             | new CodeBlock(@$"new ActivityHeatmap()
 .Data(data)
-.ColorScheme([Colors.Blue, Colors.Red])
-.OnDayClick(day => Console.WriteLine(...));", Languages.Csharp)
+.ColorScheme([Colors.{selectedNegativeColor.Value}, Colors.{selectedPositiveColor.Value}]);", Languages.Csharp)
+
+            | (Layout
+                .Horizontal()
+                .Gap(2)
+                | (Layout.Horizontal().Gap(2).Width(Size.Fit())
+                    | selectedNegativeColor.ToColorInput().Variant(ColorInputVariant.SwatchPicker)
+                    | Text.P($"Negative: {selectedNegativeColor.Value}"))
+                | (Layout.Horizontal().Gap(2).Width(Size.Fit())
+                    | selectedPositiveColor.ToColorInput().Variant(ColorInputVariant.SwatchPicker)
+                    | Text.P($"Positive: {selectedPositiveColor.Value}")))
+
             | new ActivityHeatmap()
                 .Data(GenerateActivityData(-100, 100, 0.1))
-                .ColorScheme([Colors.Blue, Colors.Red])
+                .ColorScheme([selectedNegativeColor.Value, selectedPositiveColor.Value])
 
             | new DropDownMenu(@evt =>
                 {
