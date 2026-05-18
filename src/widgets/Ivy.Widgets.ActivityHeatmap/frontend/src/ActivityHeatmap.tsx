@@ -1,14 +1,18 @@
 import "./style.css";
 import { ActivityHeatmapProps, Activity } from "./types";
 
-function buildColorScheme(baseColor: string): string[] {
-  return [
-    "color-mix(in srgb, var(--color-neutral) 15%, transparent)",
-    `color-mix(in srgb, ${baseColor} 25%, transparent)`,
-    `color-mix(in srgb, ${baseColor} 50%, transparent)`,
-    `color-mix(in srgb, ${baseColor} 75%, transparent)`,
-    baseColor,
-  ];
+function buildBipolarColors(minColor: string, maxColor: string): Record<number, string> {
+  return {
+    [-4]: minColor,
+    [-3]: `color-mix(in srgb, ${minColor} 75%, transparent)`,
+    [-2]: `color-mix(in srgb, ${minColor} 50%, transparent)`,
+    [-1]: `color-mix(in srgb, ${minColor} 25%, transparent)`,
+    [0]: "transparent",
+    [1]: `color-mix(in srgb, ${maxColor} 25%, transparent)`,
+    [2]: `color-mix(in srgb, ${maxColor} 50%, transparent)`,
+    [3]: `color-mix(in srgb, ${maxColor} 75%, transparent)`,
+    [4]: maxColor,
+  };
 }
 
 const preferredLanguage = navigator.languages.length ? navigator.languages : navigator.language;
@@ -16,16 +20,25 @@ const monthFormatter = new Intl.DateTimeFormat(preferredLanguage, { month: "shor
 const weekdayFormatter = new Intl.DateTimeFormat(preferredLanguage, { weekday: "short" });
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => monthFormatter.format(new Date(0, i)));
 
-const MONDAY = weekdayFormatter.format(new Date('2025-01-06'));
-const WEDNESDAY = weekdayFormatter.format(new Date('2025-01-08'));
-const FRIDAY = weekdayFormatter.format(new Date('2025-01-10'));
+const MONDAY = weekdayFormatter.format(new Date("2025-01-06"));
+const WEDNESDAY = weekdayFormatter.format(new Date("2025-01-08"));
+const FRIDAY = weekdayFormatter.format(new Date("2025-01-10"));
 
-function getLevel(count: number, maxCount: number): number {
-  if (count === 0 || maxCount === 0) return 0;
-  if (count <= maxCount * 0.25) return 1;
-  if (count <= maxCount * 0.5) return 2;
-  if (count <= maxCount * 0.75) return 3;
-  return 4;
+function getLevel(count: number, maxCount: number, minCount: number = 0): number {
+  if (count === 0) return 0;
+  if (count < 0 && minCount < 0) {
+    if (count <= minCount) return -4;
+    if (count <= minCount * 0.75) return -3;
+    if (count <= minCount * 0.5) return -2;
+    return -1;
+  }
+  if (count > 0 && maxCount > 0) {
+    if (count <= maxCount * 0.25) return 1;
+    if (count <= maxCount * 0.5) return 2;
+    if (count <= maxCount * 0.75) return 3;
+    return 4;
+  }
+  return 0;
 }
 
 function formatLocalDateKey(date: Date): string {
@@ -35,11 +48,7 @@ function formatLocalDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function buildGrid(
-  data: Activity[],
-  startDate?: string,
-  endDate?: string
-): (Activity | null)[][] {
+function buildGrid(data: Activity[], startDate?: string, endDate?: string): (Activity | null)[][] {
   const hasOverride = startDate || endDate;
 
   if (data.length === 0 && !hasOverride) {
@@ -56,7 +65,9 @@ function buildGrid(
   const lastStr = endDate ?? (sorted.length > 0 ? sorted[sorted.length - 1].date : null);
 
   const today = new Date();
-  const firstDate = firstStr ? new Date(firstStr + "T00:00:00") : new Date(new Date().setDate(today.getDate() - 364));
+  const firstDate = firstStr
+    ? new Date(firstStr + "T00:00:00")
+    : new Date(new Date().setDate(today.getDate() - 364));
   const lastDate = lastStr ? new Date(lastStr + "T00:00:00") : today;
 
   return buildGridFromRange(data, firstDate, lastDate);
@@ -65,7 +76,7 @@ function buildGrid(
 function buildGridFromRange(
   data: Activity[],
   firstDate: Date,
-  lastDate: Date
+  lastDate: Date,
 ): (Activity | null)[][] {
   let rangeStart = firstDate;
   let rangeEnd = lastDate;
@@ -131,7 +142,21 @@ export function ActivityHeatmap({
 }: ActivityHeatmapProps) {
   const weeks = buildGrid(data, startDate, endDate);
   const maxCount = Math.max(0, ...data.map((d) => d.count));
-  const colors = buildColorScheme(`var(--color-${colorScheme.toLowerCase()})`);
+  const minCount = Math.min(0, ...data.map((d) => d.count));
+  const rawScheme = Array.isArray(colorScheme) ? colorScheme : [colorScheme ?? "primary"];
+  const isBipolar = rawScheme.length >= 2;
+  const colorMap: Record<number, string> = isBipolar
+    ? buildBipolarColors(
+        `var(--color-${rawScheme[0]!.toLowerCase()})`,
+        `var(--color-${rawScheme[1]!.toLowerCase()})`,
+      )
+    : {
+        0: "transparent",
+        1: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 25%, transparent)`,
+        2: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 50%, transparent)`,
+        3: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 75%, transparent)`,
+        4: `var(--color-${rawScheme[0]!.toLowerCase()})`,
+      };
   const clickable = events.includes("OnDayClick");
 
   // Compute month labels: for each week, check if the first non-null day is the first occurrence of a new month
@@ -159,10 +184,8 @@ export function ActivityHeatmap({
 
   return (
     <div className="flex w-full relative bg-background rounded border-secondary">
-      <div className=" overflow-x-auto p-0"
-        style={{ direction: "rtl" }}>
-        <div className="inline-flex flex-col gap-1 font-sans"
-          style={{ direction: "ltr" }}>
+      <div className=" overflow-x-auto p-0" style={{ direction: "rtl" }}>
+        <div className="inline-flex flex-col gap-1 font-sans" style={{ direction: "ltr" }}>
           {showMonthLabels && (
             <div className="flex gap-0.5 text-[#57606a] w-fit">
               {showDayLabels && <div style={{ width: "28px" }} />}
@@ -196,8 +219,7 @@ export function ActivityHeatmap({
               </div>
             )}
 
-            <div className="flex gap-0.5 "
-              style={{ paddingLeft: showDayLabels ? 28 : 0 }}>
+            <div className="flex gap-0.5 " style={{ paddingLeft: showDayLabels ? 28 : 0 }}>
               {weeks.map((week, wi) => (
                 <div
                   key={wi}
@@ -205,10 +227,9 @@ export function ActivityHeatmap({
                   style={{ gridTemplateRows: "repeat(7, 11px)" }}
                 >
                   {week.map((day, di) => {
-                    const level = day ? getLevel(day.count, maxCount) : 0;
-                    const bg = colors[level] ?? colors[0]!;
-                    const title =
-                      showTooltip && day ? formatTooltip(day) : undefined;
+                    const level = day ? getLevel(day.count, maxCount, minCount) : 0;
+                    const bg = colorMap[level] ?? "transparent";
+                    const title = showTooltip && day ? formatTooltip(day) : undefined;
                     return (
                       <div
                         key={di}

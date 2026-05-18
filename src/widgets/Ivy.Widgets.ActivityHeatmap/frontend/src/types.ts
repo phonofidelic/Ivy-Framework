@@ -3,21 +3,17 @@ export interface Activity {
   count: number;
 }
 
-export type IvyEventHandler = (
-  eventName: string,
-  widgetId: string,
-  args: unknown[]
-) => void;
+export type IvyEventHandler = (eventName: string, widgetId: string, args: unknown[]) => void;
 
 export interface ActivityHeatmapProps {
   id: string;
   events?: string[];
   eventHandler: IvyEventHandler;
   data?: Activity[];
-  colorScheme?: string;
+  colorScheme?: string | string[];
   showTooltip?: boolean;
   showMonthLabels?: boolean;
   showDayLabels?: boolean;
   startDate?: string; // "YYYY-MM-DD"
-  endDate?: string;   // "YYYY-MM-DD"
+  endDate?: string; // "YYYY-MM-DD"
 }
