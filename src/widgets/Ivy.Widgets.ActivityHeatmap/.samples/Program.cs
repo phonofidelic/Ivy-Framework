@@ -28,6 +28,7 @@ class ActivityHeatmapDemo : ViewBase
         var selectedColor = UseState(Colors.Emerald);
         var selectedNegativeColor = UseState(Colors.Destructive);
         var selectedPositiveColor = UseState(Colors.Success);
+        var selectedDensity = UseState(Density.Large);
         var showDayLabels = UseState(false);
         var showMonthLabels = UseState(false);
         var nullableRange = UseState<(DateOnly?, DateOnly?)>(() =>
@@ -120,22 +121,24 @@ class ActivityHeatmapDemo : ViewBase
             | Text.H2("With Bipolar Color Scheme:")
             | new CodeBlock(@$"new ActivityHeatmap()
 .Data(data)
-.ColorScheme([Colors.{selectedNegativeColor.Value}, Colors.{selectedPositiveColor.Value}]);", Languages.Csharp)
+.ColorScheme([Colors.{selectedNegativeColor.Value}, Colors.{selectedPositiveColor.Value}])
+.Density(Density.{selectedDensity});", Languages.Csharp)
 
             | (Layout
                 .Horizontal()
                 .Gap(2)
                 | (Layout.Horizontal().Gap(2).Width(Size.Fit())
+                    | Text.P($"Negative: {selectedNegativeColor.Value}").NoWrap()
                     | selectedNegativeColor.ToColorInput().Variant(ColorInputVariant.SwatchPicker)
-                    | Text.P($"Negative: {selectedNegativeColor.Value}"))
-                | (Layout.Horizontal().Gap(2).Width(Size.Fit())
+                    | Text.P($"Positive: {selectedPositiveColor.Value}").NoWrap()
                     | selectedPositiveColor.ToColorInput().Variant(ColorInputVariant.SwatchPicker)
-                    | Text.P($"Positive: {selectedPositiveColor.Value}")))
+                    | Text.P("Density:")
+                    | selectedDensity.ToSelectInput()))
 
             | new ActivityHeatmap()
                 .Data(GenerateActivityData(-100, 100, 0.1))
                 .ColorScheme([selectedNegativeColor.Value, selectedPositiveColor.Value])
-                .Density(Density.Large)
+                .Density(selectedDensity.Value)
 
             | new DropDownMenu(@evt =>
                 {
