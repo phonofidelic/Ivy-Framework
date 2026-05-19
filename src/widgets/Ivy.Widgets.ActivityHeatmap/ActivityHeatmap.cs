@@ -125,9 +125,9 @@ public static class ActivityHeatmapGrid
         if (count < 0 && minCount.HasValue && minCount.Value < 0)
         {
             var min = minCount.Value;
-            if (count <= min)            return -4;
-            if (count <= min * 0.75)     return -3;
-            if (count <= min * 0.50)     return -2;
+            if (count <= min) return -4;
+            if (count <= min * 0.75) return -3;
+            if (count <= min * 0.50) return -2;
             return -1;
         }
         if (count > 0 && maxCount > 0)
