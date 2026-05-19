@@ -270,8 +270,10 @@ export function ActivityHeatmap({
             </div>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 flex justify-center gap-1 text-secondary-foreground opacity-50" style={{ direction: "ltr" }}>
-          <div style={{ fontSize: "10px", lineHeight: `${LEGEND_CELL_SIZE}px` }}>
+        <div className="absolute bottom-0 left-0 flex justify-center gap-1" style={{ direction: "ltr" }}>
+          <div
+            className="text-secondary-foreground opacity-50"
+            style={{ fontSize: "10px", lineHeight: `${cellSize}px` }}>
             Less
           </div>
           <div
@@ -329,7 +331,9 @@ export function ActivityHeatmap({
               height: `${LEGEND_CELL_SIZE}px`,
             }} />
           </div>
-          <div style={{ fontSize: "10px", lineHeight: `${LEGEND_CELL_SIZE}px` }}>
+          <div
+            className="text-secondary-foreground opacity-50"
+            style={{ fontSize: "10px", lineHeight: `${LEGEND_CELL_SIZE}px` }}>
             More
           </div>
         </div>
