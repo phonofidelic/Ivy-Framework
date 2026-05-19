@@ -135,6 +135,7 @@ class ActivityHeatmapDemo : ViewBase
             | new ActivityHeatmap()
                 .Data(GenerateActivityData(-100, 100, 0.1))
                 .ColorScheme([selectedNegativeColor.Value, selectedPositiveColor.Value])
+                .Density(Density.Large)
 
             | new DropDownMenu(@evt =>
                 {

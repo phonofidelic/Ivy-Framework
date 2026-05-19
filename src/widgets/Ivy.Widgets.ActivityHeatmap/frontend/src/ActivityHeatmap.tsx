@@ -1,16 +1,26 @@
 import "./style.css";
-import { ActivityHeatmapProps, Activity } from "./types";
+import { ActivityHeatmapProps, Activity, Densities } from "./types";
+
+function buildUnipolarColors(color: string): Record<number, string> {
+  return {
+    [0]: "color-mix(in srgb, var(--color-neutral) 25%, transparent)",
+    [1]: `color-mix(in srgb, ${color} 65%, transparent)`,
+    [2]: `color-mix(in srgb, ${color} 75%, transparent)`,
+    [3]: `color-mix(in srgb, ${color} 85%, transparent)`,
+    [4]: color,
+  };
+}
 
 function buildBipolarColors(minColor: string, maxColor: string): Record<number, string> {
   return {
     [-4]: minColor,
-    [-3]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 75%, ${maxColor}) 85%, transparent)`,
-    [-2]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 50%, ${maxColor}) 75%, transparent)`,
-    [-1]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 25%, ${maxColor}) 33%, transparent)`,
-    [0]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 50%, ${maxColor}) 15%, transparent)`,
-    [1]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 25%, ${minColor}) 33%, transparent)`,
-    [2]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 50%, ${minColor}) 75%, transparent)`,
-    [3]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 75%, ${minColor}) 85%, transparent)`,
+    [-3]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 85%, ${maxColor}) 85%, transparent)`,
+    [-2]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 75%, ${maxColor}) 75%, transparent)`,
+    [-1]: `color-mix(in srgb, color-mix(in srgb, ${minColor} 65%, ${maxColor}) 45%, transparent)`,
+    [0]: "color-mix(in srgb, var(--color-neutral) 25%, transparent)",
+    [1]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 65%, ${minColor}) 45%, transparent)`,
+    [2]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 75%, ${minColor}) 75%, transparent)`,
+    [3]: `color-mix(in srgb, color-mix(in srgb, ${maxColor} 85%, ${minColor}) 85%, transparent)`,
     [4]: maxColor,
   };
 }
@@ -23,6 +33,8 @@ const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => monthFormatter.format(n
 const MONDAY = weekdayFormatter.format(new Date("2025-01-06"));
 const WEDNESDAY = weekdayFormatter.format(new Date("2025-01-08"));
 const FRIDAY = weekdayFormatter.format(new Date("2025-01-10"));
+
+
 
 function getLevel(count: number, maxCount: number, minCount: number = 0): number {
   if (count === 0) return 0;
@@ -128,19 +140,32 @@ function formatTooltip(day: Activity): string {
   return `${month} ${dayNum}, ${year} — ${day.count} ${label}`;
 }
 
+function mapDensityToGridSizes(density: Densities): { cellSize: number, cellGap: number } {
+  switch (density) {
+    case Densities.Small:
+      return { cellSize: 8, cellGap: 0.5 };
+    case Densities.Large:
+      return { cellSize: 16, cellGap: 1 };
+    default:
+      return { cellSize: 11, cellGap: 0.5 };
+  }
+}
+
 export function ActivityHeatmap({
   id,
   events = [],
   eventHandler,
   data = [],
   colorScheme = "primary",
+  density = Densities.Medium,
   showTooltip = true,
   showMonthLabels = true,
   showDayLabels = true,
   startDate,
   endDate,
 }: ActivityHeatmapProps) {
-  // console.log(`data: ${JSON.stringify(data, null,)}`);
+  const { cellSize, cellGap } = mapDensityToGridSizes(density);
+  const LEGEND_CELL_SIZE = 11;
   const weeks = buildGrid(data, startDate, endDate);
   const counts = data.map((d) => d.count ?? 0);
   const maxCount = counts.length ? Math.max(0, ...counts) : 0;
@@ -152,13 +177,7 @@ export function ActivityHeatmap({
       `var(--color-${rawScheme[0]!.toLowerCase()})`,
       `var(--color-${rawScheme[1]!.toLowerCase()})`,
     )
-    : {
-      0: "var(--color-muted)",
-      1: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 25%, transparent)`,
-      2: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 50%, transparent)`,
-      3: `color-mix(in srgb, var(--color-${rawScheme[0]!.toLowerCase()}) 75%, transparent)`,
-      4: `var(--color-${rawScheme[0]!.toLowerCase()})`,
-    };
+    : buildUnipolarColors(`var(--color-${rawScheme[0]!.toLowerCase()})`);
   const clickable = events.includes("OnDayClick");
 
   // Compute month labels: for each week, check if the first non-null day is the first occurrence of a new month
@@ -187,15 +206,15 @@ export function ActivityHeatmap({
   return (
     <div className="flex w-full relative bg-background rounded border-secondary pb-6">
       <div className="overflow-x-auto p-0" style={{ direction: "rtl" }}>
-        <div className="inline-flex flex-col gap-1 font-sans" style={{ direction: "ltr" }}>
+        <div className={`inline-flex flex-col gap-${cellGap} font-sans`} style={{ direction: "ltr" }}>
           {showMonthLabels && (
-            <div className="flex gap-0.5 text-[#57606a] w-fit">
+            <div className={`flex gap-${cellGap} text-[#57606a] w-fit`}>
               {showDayLabels && <div style={{ width: "28px" }} />}
               {weeks.map((_, wi) => (
                 <div
                   key={wi}
                   className="text-center flex text-secondary-foreground opacity-50 last:hidden"
-                  style={{ width: "11px", fontSize: "10px" }}
+                  style={{ width: `${cellSize}px`, fontSize: "10px" }}
                 >
                   {monthLabels[wi]}
                 </div>
@@ -203,30 +222,30 @@ export function ActivityHeatmap({
             </div>
           )}
 
-          <div className="flex gap-1">
+          <div className={`flex gap-${cellGap}`}>
             {showDayLabels && (
               <div className="flex flex-col justify-end absolute left-0 top-0 bottom-[24px] bg-background">
                 <div
-                  className="grid gap-0.5 text-secondary-foreground opacity-50 pt-0.5 *:pr-2 *:text-right"
-                  style={{ gridTemplateRows: "repeat(7, 11px)", width: "28px" }}
+                  className={`grid gap-${cellGap} text-secondary-foreground opacity-50 pt-1 *:pr-2 *:text-right`}
+                  style={{ gridTemplateRows: `repeat(7, ${cellSize}px)`, width: "28px" }}
                 >
                   <div />
-                  <div style={{ fontSize: "10px", lineHeight: "11px" }}>{MONDAY}</div>
+                  <div style={{ fontSize: "10px", lineHeight: `${cellSize}px` }}>{MONDAY}</div>
                   <div />
-                  <div style={{ fontSize: "10px", lineHeight: "11px" }}>{WEDNESDAY}</div>
+                  <div style={{ fontSize: "10px", lineHeight: `${cellSize}px` }}>{WEDNESDAY}</div>
                   <div />
-                  <div style={{ fontSize: "10px", lineHeight: "11px" }}>{FRIDAY}</div>
+                  <div style={{ fontSize: "10px", lineHeight: `${cellSize}px` }}>{FRIDAY}</div>
                   <div />
                 </div>
               </div>
             )}
 
-            <div className="flex gap-0.5 " style={{ paddingLeft: showDayLabels ? 28 : 0 }}>
+            <div className={`flex gap-${cellGap}`} style={{ paddingLeft: showDayLabels ? 28 : 0 }}>
               {weeks.map((week, wi) => (
                 <div
                   key={wi}
-                  className="grid gap-0.5"
-                  style={{ gridTemplateRows: "repeat(7, 11px)" }}
+                  className={`grid gap-${cellGap}`}
+                  style={{ gridTemplateRows: `repeat(7, ${cellSize}px)` }}
                 >
                   {week.map((day, di) => {
                     const level = day ? getLevel(day.count, maxCount, minCount) : 0;
@@ -235,8 +254,12 @@ export function ActivityHeatmap({
                     return (
                       <div
                         key={di}
-                        className={`w-[11px] h-[11px] rounded-sm ${clickable && day?.count ? "cursor-pointer" : "cursor-default"}`}
-                        style={{ backgroundColor: bg }}
+                        className={`rounded-sm ${clickable && day?.count ? "cursor-pointer" : "cursor-default"}`}
+                        style={{
+                          backgroundColor: bg,
+                          width: `${cellSize}px`,
+                          height: `${cellSize}px`,
+                        }}
                         title={title}
                         onClick={day ? () => handleClick(day) : undefined}
                       />
@@ -247,44 +270,66 @@ export function ActivityHeatmap({
             </div>
           </div>
         </div>
-        <div className="absolute bottom-0 right-0 flex justify-center gap-1" style={{ direction: "ltr" }}>
-          <div style={{ fontSize: "10px", lineHeight: "11px" }}>
+        <div className="absolute bottom-0 left-0 flex justify-center gap-1 text-secondary-foreground opacity-50" style={{ direction: "ltr" }}>
+          <div style={{ fontSize: "10px", lineHeight: `${LEGEND_CELL_SIZE}px` }}>
             Less
           </div>
-          <div className="grid gap-0.5" style={{ gridTemplateColumns: isBipolar ? "repeat(9, 11px)" : "repeat(5, 11px)" }}>
+          <div
+            className="grid gap-0.5"
+            style={{ gridTemplateColumns: isBipolar ? "repeat(9, 11px)" : "repeat(5, 11px)" }}
+            data-testid="activity-heatmap-legend"
+          >
             {isBipolar && (
               <>
-                <div className="col-span-1">
-                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-4] }} />
-                </div>
-                <div className="col-span-1">
-                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-3] }} />
-                </div>
-                <div className="col-span-1">
-                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-2] }} />
-                </div>
-                <div className="col-span-1">
-                  <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[-1] }} />
-                </div>
+                <div className="rounded-sm" style={{
+                  backgroundColor: colorMap[-4],
+                  width: `${LEGEND_CELL_SIZE}px`,
+                  height: `${LEGEND_CELL_SIZE}px`,
+                }} />
+                <div className="rounded-sm" style={{
+                  backgroundColor: colorMap[-3],
+                  width: `${LEGEND_CELL_SIZE}px`,
+                  height: `${LEGEND_CELL_SIZE}px`,
+                }} />
+                <div className="rounded-sm" style={{
+                  backgroundColor: colorMap[-2],
+                  width: `${LEGEND_CELL_SIZE}px`,
+                  height: `${LEGEND_CELL_SIZE}px`,
+                }} />
+                <div className="rounded-sm" style={{
+                  backgroundColor: colorMap[-1],
+                  width: `${LEGEND_CELL_SIZE}px`,
+                  height: `${LEGEND_CELL_SIZE}px`,
+                }} />
               </>
             )}
-            <div className="col-span-1">
-              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[0] }} />
-            </div>
-            <div className="col-span-1">
-              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[1] }} />
-            </div>
-            <div className="col-span-1">
-              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[2] }} />
-            </div>
-            <div className="col-span-1">
-              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[3] }} />
-            </div>
-            <div className="col-span-1">
-              <div className="size-[11px] rounded-sm" style={{ backgroundColor: colorMap[4] }} />
-            </div>
+            <div className="rounded-sm" style={{
+              backgroundColor: colorMap[0],
+              width: `${LEGEND_CELL_SIZE}px`,
+              height: `${LEGEND_CELL_SIZE}px`,
+            }} />
+            <div className="rounded-sm" style={{
+              backgroundColor: colorMap[1],
+              width: `${LEGEND_CELL_SIZE}px`,
+              height: `${LEGEND_CELL_SIZE}px`,
+            }} />
+            <div className="rounded-sm" style={{
+              backgroundColor: colorMap[2],
+              width: `${LEGEND_CELL_SIZE}px`,
+              height: `${LEGEND_CELL_SIZE}px`,
+            }} />
+            <div className="rounded-sm" style={{
+              backgroundColor: colorMap[3],
+              width: `${LEGEND_CELL_SIZE}px`,
+              height: `${LEGEND_CELL_SIZE}px`,
+            }} />
+            <div className="rounded-sm" style={{
+              backgroundColor: colorMap[4],
+              width: `${LEGEND_CELL_SIZE}px`,
+              height: `${LEGEND_CELL_SIZE}px`,
+            }} />
           </div>
-          <div style={{ fontSize: "10px", lineHeight: "11px" }}>
+          <div style={{ fontSize: "10px", lineHeight: `${LEGEND_CELL_SIZE}px` }}>
             More
           </div>
         </div>

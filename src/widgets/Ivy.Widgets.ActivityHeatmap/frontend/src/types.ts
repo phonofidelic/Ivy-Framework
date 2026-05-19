@@ -3,6 +3,13 @@ export interface Activity {
   count: number;
 }
 
+// TODO: Use Density enum from frontend/src/types/density.ts
+export enum Densities {
+  Medium = "Medium",
+  Small = "Small",
+  Large = "Large",
+}
+
 export type IvyEventHandler = (eventName: string, widgetId: string, args: unknown[]) => void;
 
 export interface ActivityHeatmapProps {
@@ -11,6 +18,7 @@ export interface ActivityHeatmapProps {
   eventHandler: IvyEventHandler;
   data?: Activity[];
   colorScheme?: string | string[];
+  density?: Densities;
   showTooltip?: boolean;
   showMonthLabels?: boolean;
   showDayLabels?: boolean;
