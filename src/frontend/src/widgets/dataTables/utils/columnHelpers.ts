@@ -52,6 +52,41 @@ export function reorderColumns(
   return result;
 }
 
+export function resolveColumnWidth(
+  col: DataColumn,
+  originalIndex: number,
+  columnWidths: Record<string, number>,
+  headerFont?: string,
+): number {
+  const baseWidth = columnWidths[originalIndex.toString()] || col.width;
+  let numericBaseWidth = typeof baseWidth === "string" ? parseFloat(baseWidth) : baseWidth;
+
+  if (isNaN(numericBaseWidth) || !numericBaseWidth) {
+    numericBaseWidth = estimateHeaderWidth(col.header || col.name, headerFont);
+  }
+
+  const minWidth = parseSizeMin(col.originalWidth);
+  if (minWidth && minWidth > numericBaseWidth) {
+    numericBaseWidth = minWidth;
+  }
+
+  return numericBaseWidth;
+}
+
+export function getVisibleColumnWidthAt(
+  colIndex: number,
+  columns: DataColumn[],
+  columnOrder: number[],
+  columnWidths: Record<string, number>,
+  headerFont?: string,
+): number | undefined {
+  const orderedColumns = getOrderedVisibleDataColumns(columns, columnOrder);
+  const col = orderedColumns[colIndex];
+  if (!col) return undefined;
+  const originalIndex = columns.indexOf(col);
+  return resolveColumnWidth(col, originalIndex, columnWidths, headerFont);
+}
+
 export function getOrderedVisibleDataColumns(
   columns: DataColumn[],
   columnOrder: number[],
@@ -60,7 +95,11 @@ export function getOrderedVisibleDataColumns(
   let orderedColumns = visibleColumns;
 
   if (columnOrder.length === columns.length) {
-    orderedColumns = columnOrder.map((idx) => columns[idx]).filter((col) => !col.hidden);
+    orderedColumns = columnOrder.reduce<DataColumn[]>((acc, idx) => {
+      const col = columns[idx];
+      if (col && !col.hidden) acc.push(col);
+      return acc;
+    }, []);
   } else {
     const hasOrderProperty = visibleColumns.some((col) => col.order !== undefined);
     if (hasOrderProperty) {
@@ -87,30 +126,21 @@ export function convertToGridColumns(
 
   return orderedColumns.map((col, index) => {
     const originalIndex = columns.indexOf(col);
-    const baseWidth = columnWidths[originalIndex.toString()] || col.width;
-    let numericBaseWidth = typeof baseWidth === "string" ? parseFloat(baseWidth) : baseWidth;
-
-    if (isNaN(numericBaseWidth) || !numericBaseWidth) {
-      numericBaseWidth = estimateHeaderWidth(col.header || col.name, headerFont);
-    }
-
-    const minWidth = parseSizeMin(col.originalWidth);
-    if (minWidth && minWidth > numericBaseWidth) {
-      numericBaseWidth = minWidth;
-    }
+    const numericBaseWidth = resolveColumnWidth(col, originalIndex, columnWidths, headerFont);
 
     const grow = parseSizeGrow(col.originalWidth);
     const isLastColumn = index === orderedColumns.length - 1;
     const effectiveGrow = grow !== undefined ? grow : isLastColumn ? 1 : undefined;
 
     const shouldShowIcon = Boolean(col.icon) || showColumnTypeIcons;
-    let columnIcon = shouldShowIcon ? mapColumnIcon(col) : undefined;
-    if (activeSort && activeSort.length > 0) {
-      const sortForColumn = activeSort.find((sort) => sort.column === col.name);
-      if (sortForColumn) {
-        columnIcon = sortForColumn.direction === "ASC" ? "ArrowUp" : "ArrowDown";
-      }
-    }
+    const columnIcon = shouldShowIcon ? mapColumnIcon(col) : undefined;
+    const sortForColumn = activeSort?.find((sort) => sort.column === col.name);
+    const indicatorIcon =
+      sortForColumn !== undefined
+        ? sortForColumn.direction === "ASC"
+          ? "ArrowUp"
+          : "ArrowDown"
+        : undefined;
 
     return {
       title: col.header || col.name,
@@ -118,6 +148,7 @@ export function convertToGridColumns(
       ...(effectiveGrow !== undefined && { grow: effectiveGrow }),
       group: showGroups ? col.group : undefined,
       icon: columnIcon,
+      ...(indicatorIcon !== undefined && { indicatorIcon }),
     };
   });
 }
